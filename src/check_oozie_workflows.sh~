@@ -43,7 +43,7 @@ else
   TIME_RANGE=$5
   HISTORY_LENGTH=$6
 fi
-out=`python $( dirname ${BASH_SOURCE[0]} )/check_oozie_workflows.py $HOST $PORT $SEC_MODE $TIME_RANGE $HISTORY_LENGTH $HTTP_USER $HTTP_PWD 2>&1`;
+out=`python $( dirname ${BASH_SOURCE[0]} )/check_oozie_workflows.py $HOST $PORT $SEC_MODE $TIME_RANGE $HISTORY_LENGTH 2>&1`;
 rc=$?;
 echo $out;
 exit $rc;

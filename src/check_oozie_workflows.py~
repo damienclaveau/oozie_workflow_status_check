@@ -88,14 +88,18 @@ class OozieConnect():
 	#opener = urllib2.badd_handler(auth_handler)
 	#urllib2.install_opener(opener)
 	#raw_json = urllib2.urlopen(uri)
-
-	#password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
-	#password_mgr.add_password(None, host + ":" + port + "/oozie", self.username, self.password)
-	#handler = urllib2.HTTPBasicAuthHandler(password_mgr)
-	#opener = urllib2.build_opener(handler)
-	#resp = opener.open(uri)
-	#urllib2.install_opener(opener)
-	#raw_json = urllib2.urlopen(uri)
+password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
+# créer un password manager
+password_mgr.add_password(None, host + ":" + port + "/oozie", self.username, self.password)
+# ajoute le username et password
+# si on connaissait le domaine, on pourrait l'utiliser au lieu de ``None``
+handler = urllib2.HTTPBasicAuthHandler(password_mgr)
+# créer le handler
+opener = urllib2.build_opener(handler)
+# du handler vers  l'opener
+opener.open(a_url)
+# utilise l'opener pour ramener un URL
+urllib2.install_opener(opener)
 
 	request = urllib2.Request(uri)
 	base64string = base64.encodestring('%s:%s' % (self.username, self.password)).replace('\n', '')
