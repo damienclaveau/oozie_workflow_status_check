@@ -21,27 +21,26 @@
 #
 HOST=`echo $1 | tr '[:upper:]' '[:lower:]'`
 PORT=$2
-JAVA_HOME=$3
-SEC_MODE=$4
+SEC_MODE=$3 
 if [[ "$SEC_MODE" == "kerberos" ]]; then
-  NAGIOS_KEYTAB=$5
-  NAGIOS_USER=$6
-  KINIT_PATH=$7
-  TIME_RANGE=$8
-  HISTORY_LENGTH=$9
+  NAGIOS_KEYTAB=$4
+  NAGIOS_USER=$5
+  KINIT_PATH=$6
+  TIME_RANGE=$7
+  HISTORY_LENGTH=$8
   out1=`${KINIT_PATH} -kt ${NAGIOS_KEYTAB} ${NAGIOS_USER} 2>&1`
   if [[ "$?" -ne 0 ]]; then
     echo "CRITICAL: Error doing kinit for nagios [$out1]";
     exit 2;
   fi
 elif [[ "$SEC_MODE" == "basicauth" ]]; then
-  TIME_RANGE=$5
-  HISTORY_LENGTH=$6
-  HTTP_USER=$7
-  HTTP_PWD=$8
+  TIME_RANGE=$4
+  HISTORY_LENGTH=$5
+  HTTP_USER=$6
+  HTTP_PWD=$7
 else
-  TIME_RANGE=$5
-  HISTORY_LENGTH=$6
+  TIME_RANGE=$4
+  HISTORY_LENGTH=$5
 fi
 out=`python $( dirname ${BASH_SOURCE[0]} )/check_oozie_workflows.py $HOST $PORT $SEC_MODE $TIME_RANGE $HISTORY_LENGTH $HTTP_USER $HTTP_PWD 2>&1`;
 rc=$?;

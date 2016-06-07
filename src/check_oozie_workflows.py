@@ -27,7 +27,6 @@ import sys
 import urllib
 import json
 import datetime
-import urllib2_kerberos
 import urllib2
 import pytz
 import base64
@@ -260,6 +259,9 @@ if __name__ == "__main__":
         print "Arguments to check script are wrong"
         print "Expecting [1] host [2] port [3] security mode (none|kerberos|basicauth) [4] range in minutes [5] number of jobs [6] username [7] password"
         sys.exit(0)
+
+    if security_mode == "kerberos":
+        import urllib2_kerberos
 
     oozie_connection = OozieConnect(host, port, security_mode, username, password)
     # if oozie_connection.test_connection():
