@@ -27,39 +27,32 @@ import sys
 import urllib
 import json
 import datetime
-import urllib2
 import pytz
 import base64
 import ssl
+import requests
+from requests_kerberos import HTTPKerberosAuth
 
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 class OozieConnect():
-    def __init__(self, host="localhost", port="11000", security_flag="none", username="", password=""):
+    def __init__(self, host="localhost", security_flag="none", username="", password=""):
         self.uris = {}
         self.security_flag = security_flag
         self.host = host
-        self.port = port
         self.username = username
         self.password = password
+	self.set_uris(self, "localhost")
 
-	self.ctx = ssl.create_default_context()
-	self.ctx.check_hostname = False
-	self.ctx.verify_mode = ssl.CERT_NONE
-
-#       Setter functions below here
-        self.set_uris(self.host, self.port)
-#       Get current timezone - This assumes Oozie has been setup for the system timezone
-
-    def set_uris(self, host, port, history_offset=1, history_length=100, status="SUCCEEDED"):
-        self.uris["base"] = "http://" + host + ":" + port + "/oozie"
+    def set_uris(self, host, history_offset=1, history_length=100, status="SUCCEEDED"):
+        self.uris["base"] = host
         self.set_job_uris(history_offset, history_length, status)
-        self.uris["status"] = self.uris["base"] + "/v1/admin/status"
+        self.uris["status"] = str(self.uris["base"]) + "/v1/admin/status"
 
     def set_job_uris(self, history_offset=1, history_length=100, status="SUCCEEDED"):
-        self.uris["jobs"] = self.uris["base"] + \
-                            "/v1/jobs?jobType=wf&localtime&offset=" + str(history_offset) + \
-                            "&len=" + str(history_length) + \
-                            "&filter=status%3" + status
+        self.uris["jobs"] = str(self.uris["base"]) +  "/v1/jobs?jobType=wf&offset=" + str(history_offset) +  "&len=" + str(history_length) + "&filter=status%3D" + str(status)
 
     def set_security_flag(self, security_flag):
         self.security_flag = security_flag
@@ -73,39 +66,14 @@ class OozieConnect():
             return self.insecure_connect(self.uris[uri])
 
     def kerberized_connect(self, uri):
-        opener = urllib2.build_opener(urllib2.HTTPSHandler(context=self.ctx))
-        opener.add_handler(urllib2_kerberos.HTTPKerberosAuthHandler())
-        resp = opener.open(uri)
-        a = resp.read()
-        return json.loads(a)
+        requests.get(uri, headers={"Accept" : "application/json"}, auth=HTTPKerberosAuth(), verify=False).json()
 
     def basicauth_connect(self, uri):
-
-	#auth_handler = urllib2.HTTPBasicAuthHandler()
-	#auth_handler.add_password(None, host + ":" + port + "/oozie", self.username, self.password)
-	#opener = urllib2.build_opener(urllib2.HTTPSHandler(context=self.ctx))
-	#opener = urllib2.badd_handler(auth_handler)
-	#urllib2.install_opener(opener)
-	#raw_json = urllib2.urlopen(uri)
-
-	#password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
-	#password_mgr.add_password(None, host + ":" + port + "/oozie", self.username, self.password)
-	#handler = urllib2.HTTPBasicAuthHandler(password_mgr)
-	#opener = urllib2.build_opener(handler)
-	#resp = opener.open(uri)
-	#urllib2.install_opener(opener)
-	#raw_json = urllib2.urlopen(uri)
-
-	request = urllib2.Request(uri)
-	base64string = base64.encodestring('%s:%s' % (self.username, self.password)).replace('\n', '')
-	request.add_header("Authorization", "Basic %s" % base64string)   
-	raw_json = urllib2.urlopen(request, context=self.ctx)
-        
-	return json.load(raw_json)
+	r = requests.get(uri, headers={"Accept" : "application/json"}, auth=(self.username, self.password), verify=False)
+	return r.json()
 
     def insecure_connect(self, uri):
-        raw_json = urllib.urlopen(uri, context=self.ctx)
-        return json.load(raw_json)
+        return requests.get(uri, headers={"Accept" : "application/json"}, verify=False).json()
 
     def test_connection(self):
         json_object = self.connect("status")
@@ -249,7 +217,6 @@ class OozieJobs():
 if __name__ == "__main__":
     try:
         host = sys.argv[1]
-        port = sys.argv[2]
         security_mode = sys.argv[3]
         time_range = sys.argv[4]
         history_length = sys.argv[5]
@@ -257,19 +224,17 @@ if __name__ == "__main__":
         password = sys.argv[7]
     except:
         print "Arguments to check script are wrong"
-        print "Expecting [1] host [2] port [3] security mode (none|kerberos|basicauth) [4] range in minutes [5] number of jobs [6] username [7] password"
+        print "Expecting [1] host [2] security mode (none|kerberos|basicauth) [4] range in minutes [5] number of jobs [6] username [7] password"
         sys.exit(0)
 
-    if security_mode == "kerberos":
-        import urllib2_kerberos
-
-    oozie_connection = OozieConnect(host, port, security_mode, username, password)
-    # if oozie_connection.test_connection():
-    #     print "Good Connection"
+    oozie_connection = OozieConnect(host, security_mode, username, password)
+    oozie_connection.set_uris(host)
+    #if oozie_connection.test_connection():
+    #    print "Good Connection"
     jobs = OozieJobs(oozie_connection, time_range, history_length)
     try:
         rc = jobs.run()
     except IOError:
-        print "Couldn't connect to Oozie on %s:%s" % (host, port)
+        print "Couldn't connect to Oozie on %s:%s" % (host)
         sys.exit(1)
     sys.exit(rc)
